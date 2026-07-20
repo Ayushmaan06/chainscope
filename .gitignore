@@ -12,3 +12,15 @@ wheels/
 .dual-graph/
 claude.md
 .claude/
+
+# Secrets
+.env
+
+# Cached/raw data - keep small committed samples explicitly
+data/*
+!data/samples/
+!data/.gitkeep
+
+# Generated charts
+figures/*
+!figures/.gitkeep

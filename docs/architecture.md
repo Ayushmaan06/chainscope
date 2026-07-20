@@ -47,28 +47,40 @@ No transactions, no keys needed for this half — `eth_call` against public free
 Uniswap V3: pool state (`slot0`, `liquidity`, `observe`), swap events for volume/fees.
 Aave v3: `PoolDataProvider` reads for reserve data, utilization, rates.
 
-### 4. Package layout (`research/`)
+### 4. Package layout (top-level `src/`, per CLAUDE.md's repo structure — not nested under
+a `research/` wrapper)
 
 ```
-research/
-  src/
-    protocols/     thin typed wrappers over web3.py Contract objects (UniswapV3Pool, AaveV3Reserve)
-                   + ABI json. No business logic — just "give me clean data for this address."
-    data/          collectors, one per source (uniswap_v3.py, aave.py, coingecko.py, gas.py).
-                   Common base class owns retry/backoff/caching ONCE; gotchas from CLAUDE.md
-                   (CoinGecko rate limits, Etherscan v2 shape) are handled here, not per-caller.
-    analysis/      metrics.py (rolling returns/vol, Sharpe, max drawdown, correlation),
-                   twap.py, liquidity.py (utilization, price-impact approximation)
-    visualization/ one function per chart type + a shared style module, so every figure
-                   looks like it came from the same hand
-    utils/         config (dataclass + python-dotenv — no pydantic-settings; nothing here
-                   needs schema validation beyond "is this env var set")
-  tests/
+src/
+  protocols/     thin typed wrappers over web3.py Contract objects (UniswapV3Pool, AaveV3Reserve)
+                 + ABI json. No business logic — just "give me clean data for this address."
+  data/          collectors, one per source (uniswap_v3.py, aave.py, coingecko.py, gas.py).
+                 Each collector takes a `RetryPolicy`/`ResponseCache` as a constructor arg
+                 (composition, per CLAUDE.md's Architecture Principles) rather than
+                 subclassing a shared base — same retry/caching behavior everywhere, but a
+                 collector can be tested by injecting a fake client instead of a fake
+                 subclass, and a mock client swaps in cleanly for "every network dependency
+                 is replaceable with mocks."
+  analysis/      metrics.py (rolling returns/vol, Sharpe, max drawdown, correlation),
+                 twap.py, liquidity.py (utilization, price-impact approximation).
+                 Takes DataFrames in, DataFrames/scalars out — never touches web3.py or
+                 requests directly, so it stays testable with plain fixture data and has
+                 zero knowledge that a network ever existed.
+  visualization/ one function per chart type + a shared style module, so every figure
+                 looks like it came from the same hand
+  utils/         config (dataclass + python-dotenv — no pydantic-settings; nothing here
+                 needs schema validation beyond "is this env var set"), plus the
+                 RetryPolicy/ResponseCache helpers collectors compose in
+tests/
 ```
 
-Why collectors own retry/caching centrally: four data sources means four places a network
-call can fail. One retry policy in a base class means fixing a bug there fixes it
-everywhere, instead of four call sites each getting a slightly different ad-hoc try/except.
+Why composition over inheritance for collectors: four data sources means four places a
+network call can fail, but a shared abstract base class would mean every collector *is a*
+retrying-cacher (inheritance), which makes it awkward to test a collector's parsing logic
+without also exercising the retry machinery. Instead each collector *has a* retry policy
+and *has a* cache, injected — the behavior is still written once and reused everywhere, but
+swapping in a no-op or fake policy for a unit test is a constructor argument, not a mock of
+a parent class.
 
 ### 5. Data flow
 
@@ -79,7 +91,7 @@ flowchart LR
         Etherscan[Etherscan v2 API]
         CoinGecko[CoinGecko free tier]
     end
-    subgraph Research [research/]
+    subgraph Research [Python toolkit - src/]
         Collectors[data/ collectors] --> Cache[(data/ cache)]
         Cache --> Analysis[analysis/]
         Analysis --> Viz[visualization/]
@@ -101,7 +113,7 @@ in decision 1.
 
 ### 6. Config & secrets
 
-A single `Config` dataclass in `research/src/utils/config.py`, populated from `.env` via
+A single `Config` dataclass in `src/utils/config.py`, populated from `.env` via
 `python-dotenv`. No `pydantic-settings` — nothing here needs schema validation beyond
 "is this env var present," so a stdlib-adjacent dataclass is the whole solution.
 
