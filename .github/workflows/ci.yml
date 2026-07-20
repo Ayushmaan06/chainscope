@@ -27,3 +27,5 @@ jobs:
         working-directory: contracts
       - run: forge test -vvv
         working-directory: contracts
+      - run: forge snapshot --check --tolerance 5
+        working-directory: contracts

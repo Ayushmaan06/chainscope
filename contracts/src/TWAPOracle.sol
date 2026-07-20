@@ -30,6 +30,8 @@ contract TWAPOracle {
 
     /// @notice Reverts when a non-reporter calls a reporter-only function.
     error Unauthorized(address caller);
+    /// @notice Reverts when the ring buffer is constructed with zero capacity.
+    error InvalidCardinality();
     /// @notice Reverts when `record` is called with a zero price.
     error InvalidPrice();
     /// @notice Reverts when `record` is called before `minInterval` has elapsed.
@@ -71,6 +73,7 @@ contract TWAPOracle {
     /// @param _minInterval Minimum seconds between reports (rate-limits the reporter).
     constructor(address _reporter, uint16 _cardinality, uint32 _minInterval) {
         if (_reporter == address(0)) revert Unauthorized(address(0));
+        if (_cardinality == 0) revert InvalidCardinality();
         reporter = _reporter;
         cardinality = _cardinality;
         minInterval = _minInterval;

@@ -21,4 +21,8 @@ contracts-build:
 contracts-test:
 	cd contracts && forge test
 
+contracts-snapshot:
+	cd contracts && forge snapshot
+
 check: lint format typecheck test contracts-build contracts-test
+	cd contracts && forge snapshot --check --tolerance 5
