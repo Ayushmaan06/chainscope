@@ -117,13 +117,16 @@ A single `Config` dataclass in `src/utils/config.py`, populated from `.env` via
 `python-dotenv`. No `pydantic-settings` — nothing here needs schema validation beyond
 "is this env var present," so a stdlib-adjacent dataclass is the whole solution.
 
-### 7. Testing / CI (built in Phase 2-3, noted here for the shape)
+### 7. Testing / CI
 
-`forge test` for `contracts/`, `pytest` for `research/`, one GitHub Actions workflow
-running both plus ruff + mypy on every push.
+`forge test` for `contracts/`, `pytest` for `src/`, one GitHub Actions workflow with two
+jobs (`python`, `contracts`) so either half can fail independently — done incrementally:
+the `python` job landed in Phase 2, the `contracts` job in Phase 3, once there was
+something in each half worth running.
 
 ## Deliberately deferred to later phases
 
-- Actual directory scaffolding beyond `docs/` (Phase 2)
 - ABI files / contract wrapper implementations (Phase 4/7)
-- CI workflow file (Phase 2-3 per CLAUDE.md, not bolted on later)
+- The actual TWAP oracle contract and its tests (Phase 4/5)
+- OpenZeppelin/forge-std are vendored as git submodules (`contracts/lib/`), not committed
+  source — CI checks out with `submodules: recursive`

@@ -24,3 +24,7 @@ data/*
 # Generated charts
 figures/*
 !figures/.gitkeep
+
+# Foundry build artifacts
+contracts/out/
+contracts/cache/

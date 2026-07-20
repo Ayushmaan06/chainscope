@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test check
+.PHONY: install lint format typecheck test check contracts-build contracts-test
 
 install:
 	uv sync
@@ -15,4 +15,10 @@ typecheck:
 test:
 	uv run pytest
 
-check: lint format typecheck test
+contracts-build:
+	cd contracts && forge build
+
+contracts-test:
+	cd contracts && forge test
+
+check: lint format typecheck test contracts-build contracts-test
